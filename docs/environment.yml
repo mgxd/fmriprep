@@ -23,6 +23,7 @@ dependencies:
 - cython
 
 - pip:
+    - git+https://github.com/rtfd/recommonmark.git@c410abb565a3c4ad4de0ce204ab2fa2db8031cf1#egg=recommonmark
     - sphinx-argparse
     - doctest-ignore-unicode
     - svgutils

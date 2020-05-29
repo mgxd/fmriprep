@@ -335,8 +335,8 @@ jobs:
           path: /tmp/src/fmriprep/docs/_build/html
 
   ds005:
-    machine:
-      image: circleci/classic:201711-01
+    docker:
+      - image: cimg/python:3.7
     working_directory: /tmp/ds005
     environment:
       - FS_LICENSE: /tmp/fslicense/license.txt
@@ -526,8 +526,8 @@ jobs:
           path: /tmp/ds005/work
 
   ds054:
-    machine:
-      image: circleci/classic:201711-01
+    docker:
+      - image: cimg/python:3.7
     working_directory: /tmp/ds054
     environment:
       - FS_LICENSE: /tmp/fslicense/license.txt
@@ -681,8 +681,8 @@ jobs:
           path: /tmp/ds054
 
   ds210:
-    machine:
-      image: circleci/classic:201711-01
+    docker:
+      - image: cimg/python:3.7
     working_directory: /tmp/ds210
     environment:
       - FS_LICENSE: /tmp/fslicense/license.txt

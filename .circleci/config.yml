@@ -395,8 +395,8 @@ jobs:
             mkdir -p /tmp/${DATASET}/derivatives
             sudo setfacl -d -m group:$(id -gn):rwx /tmp/${DATASET}/derivatives
             sudo setfacl -m group:$(id -gn):rwx /tmp/${DATASET}/derivatives
-            pip install --upgrade "pip<21" "setuptools<45"
-            pip install --upgrade /tmp/src/fmriprep/wrapper/
+            python3 -m pip install --upgrade pip setuptools
+            python3 -m pip install --upgrade /tmp/src/fmriprep/wrapper/
       - run:
           name: Run anatomical workflow on ds005
           no_output_timeout: 2h
@@ -572,8 +572,8 @@ jobs:
             mkdir -p /tmp/${DATASET}/derivatives
             sudo setfacl -d -m group:$(id -gn):rwx /tmp/${DATASET}/derivatives
             sudo setfacl -m group:$(id -gn):rwx /tmp/${DATASET}/derivatives
-            pip install --upgrade "pip<21" "setuptools<45"
-            pip install --upgrade /tmp/src/fmriprep/wrapper/
+            python3 -m pip install --upgrade pip setuptools
+            python3 -m pip install --upgrade /tmp/src/fmriprep/wrapper/
       - run:
           name: Set-up a Docker registry
           command: |
@@ -725,8 +725,8 @@ jobs:
           name: Setting up test
           command: |
             mkdir -p /tmp/${DATASET}/derivatives && sudo setfacl -d -m group:$(id -gn):rwx /tmp/${DATASET}/derivatives && sudo setfacl -m group:$(id -gn):rwx /tmp/${DATASET}/derivatives
-            pip install --upgrade "pip<21" "setuptools<45"
-            pip install --upgrade /tmp/src/fmriprep/wrapper/
+            python3 -m pip install --upgrade pip setuptools
+            python3 -m pip install --upgrade /tmp/src/fmriprep/wrapper/
       - run:
           name: Set-up a Docker registry
           command: |

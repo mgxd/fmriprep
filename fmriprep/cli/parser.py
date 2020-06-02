@@ -567,13 +567,15 @@ def parse_args(args=None, namespace=None):
     # Retrieve logging level
     build_log = config.loggers.cli
 
-    if not check_valid_fs_license(lic=config.execution.fs_license_file):
+    lic = opts.fs_license_file or config.execution.fs_license_file
+    if not check_valid_fs_license(lic):
         raise RuntimeError(
-            """\
+            f"""\
 ERROR: a valid license file is required for FreeSurfer to run. fMRIPrep looked for an existing \
-license file at several paths, in this order: 1) command line argument ``--fs-license-file``; \
-2) ``$FS_LICENSE`` environment variable; and 3) the ``$FREESURFER_HOME/license.txt`` path. Get it \
-(for free) by registering at https://surfer.nmr.mgh.harvard.edu/registration.html"""
+valid license file ({lic}). fMRIPrep searches in the following order: 1) command line argument \
+``--fs-license-file``; 2) ``$FS_LICENSE`` environment variable; and 3) the \
+``$FREESURFER_HOME/license.txt`` path. Get it (for free) by registering at \
+https://surfer.nmr.mgh.harvard.edu/registration.html"""
         )
 
     # Load base plugin_settings from file if --use-plugin

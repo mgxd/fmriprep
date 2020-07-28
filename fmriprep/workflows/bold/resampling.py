@@ -316,7 +316,7 @@ preprocessed BOLD runs*: {tpl}.
 
     split_target = pe.Node(niu.Function(
         function=_split_spec, input_names=['in_target'],
-        output_names=['space', 'template', 'spec']),
+        output_names=['space', 'template', 'spec', 'spacespec']),
         run_without_submitting=True, name='split_target')
 
     select_std = pe.Node(KeySelect(fields=['anat2std_xfm']),
@@ -366,7 +366,7 @@ preprocessed BOLD runs*: {tpl}.
         (inputnode, merge, [('name_source', 'header_source')]),
         (inputnode, mask_merge_tfms, [(('itk_bold_to_t1', _aslist), 'in2')]),
         (inputnode, bold_to_std_transform, [('bold_split', 'input_image')]),
-        (split_target, select_std, [('space', 'key')]),
+        (split_target, select_std, [('spacespec', 'key')]),
         (select_std, merge_xforms, [('anat2std_xfm', 'in1')]),
         (select_std, mask_merge_tfms, [('anat2std_xfm', 'in1')]),
         (split_target, gen_ref, [(('spec', _is_native), 'keep_native')]),
@@ -720,7 +720,10 @@ surface space.
 def _split_spec(in_target):
     space, spec = in_target
     template = space.split(':')[0]
-    return space, template, spec
+    spacespec = ":".join(
+        [space] + ["-".join((k, str(v))) for k, v in sorted(spec.items())]
+    )
+    return space, template, spec, spacespec
 
 
 def _select_template(template):

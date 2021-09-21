@@ -53,26 +53,108 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Installing freesurfer
-RUN curl -sSL https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.1/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.1.tar.gz \
+RUN curl -sSL --retry 5 \
+    https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.1/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.1.tar.gz \
     | tar zxv --no-same-owner -C /opt \
-    --exclude='freesurfer/diffusion' \
-    --exclude='freesurfer/docs' \
-    --exclude='freesurfer/fsfast' \
-    --exclude='freesurfer/lib/cuda' \
-    --exclude='freesurfer/lib/qt' \
-    --exclude='freesurfer/matlab' \
-    --exclude='freesurfer/mni/share/man' \
-    --exclude='freesurfer/subjects/fsaverage_sym' \
-    --exclude='freesurfer/subjects/fsaverage3' \
-    --exclude='freesurfer/subjects/fsaverage4' \
-    --exclude='freesurfer/subjects/cvs_avg35' \
-    --exclude='freesurfer/subjects/cvs_avg35_inMNI152' \
-    --exclude='freesurfer/subjects/bert' \
-    --exclude='freesurfer/subjects/lh.EC_average' \
-    --exclude='freesurfer/subjects/rh.EC_average' \
-    --exclude='freesurfer/subjects/sample-*.mgz' \
-    --exclude='freesurfer/subjects/V1_average' \
-    --exclude='freesurfer/trctrain'
+    --exclude="freesurfer/diffusion" \
+    --exclude="freesurfer/docs" \
+    --exclude="freesurfer/fsfast" \
+    --exclude="freesurfer/lib/cuda" \
+    --exclude="freesurfer/lib/qt" \
+    --exclude="freesurfer/matlab" \
+    --exclude="freesurfer/mni/share/man" \
+    --exclude="freesurfer/subjects/fsaverage_sym" \
+    --exclude="freesurfer/subjects/fsaverage3" \
+    --exclude="freesurfer/subjects/fsaverage4" \
+    --exclude="freesurfer/subjects/cvs_avg35" \
+    --exclude="freesurfer/subjects/cvs_avg35_inMNI152" \
+    --exclude="freesurfer/subjects/bert" \
+    --exclude="freesurfer/subjects/lh.EC_average" \
+    --exclude="freesurfer/subjects/rh.EC_average" \
+    --exclude="freesurfer/subjects/sample-*.mgz" \
+    --exclude="freesurfer/subjects/V1_average" \
+    --exclude="freesurfer/trctrain" \
+    && find /opt/freesurfer/bin -type f -not \( \
+        -name "analyzeto4dfp" -or \
+        -name "apas2aseg" -or \
+        -name "avi2talxfm" -or \
+        -name "bbregister" -or \
+        -name "compute_vox2vox" -or \
+        -name "extract_talairach_avi_QA.awk" -or \
+        -name "fsr-getxopts" -or \
+        -name "gauss_4dfp" -or \
+        -name "imgreg_4dfp" -or \
+        -name "lta_convert" -or \
+        -name "mpr2mni305" -or \
+        -name "mri_add_xform_to_header" -or \
+        -name "mri_and" -or \
+        -name "mri_aparc2aseg" -or \
+        -name "mri_binarize" -or \
+        -name "mri_ca_label" -or \
+        -name "mri_ca_normalize" -or \
+        -name "mri_ca_register" -or \
+        -name "mri_cc" -or \
+        -name "mri_concatenate_lta" -or \
+        -name "mri_concatenate_lta.bin" -or \
+        -name "mri_convert" -or \
+        -name "mri_convert.bin" -or \
+        -name "mri_coreg" -or \
+        -name "mri_edit_wm_with_aseg" -or \
+        -name "mri_em_register" -or \
+        -name "mri_fill" -or \
+        -name "mri_fuse_segmentations" -or \
+        -name "mri_gcut" -or \
+        -name "mri_info" -or \
+        -name "mri_label2label" -or \
+        -name "mri_label2label.bin" -or \
+        -name "mri_make_uchar" -or \
+        -name "mri_mask" -or \
+        -name "mri_mask.bin" -or \
+        -name "mri_matrix_multiply" -or \
+        -name "mri_motion_correct.fsl" -or \
+        -name "mri_normalize" -or \
+        -name "mri_normalize_tp2" -or \
+        -name "mri_nu_correct.mni" -or \
+        -name "mri_or" -or \
+        -name "mri_pretess" -or \
+        -name "mri_relabel_hypointensities" -or \
+        -name "mri_robust_register" -or \
+        -name "mri_robust_register.bin" -or \
+        -name "mri_robust_template" -or \
+        -name "mri_segment" -or \
+        -name "mri_segstats" -or \
+        -name "mri_tessellate" -or \
+        -name "mri_vol2vol" -or \
+        -name "mri_vol2vol.bin" -or \
+        -name "mri_watershed" -or \
+        -name "mris_anatomical_stats" -or \
+        -name "mris_ca_label" -or \
+        -name "mris_calc" -or \
+        -name "mris_convert" -or \
+        -name "mris_curvature" -or \
+        -name "mris_curvature_stats" -or \
+        -name "mris_euler_number" -or \
+        -name "mris_expand" -or \
+        -name "mris_extract_main_component" -or \
+        -name "mris_fix_topology" -or \
+        -name "mris_inflate" -or \
+        -name "mris_jacobian" -or \
+        -name "mris_label2annot" -or \
+        -name "mris_make_surfaces" -or \
+        -name "mris_register" -or \
+        -name "mris_remove_intersection" -or \
+        -name "mris_smooth" -or \
+        -name "mris_sphere" -or \
+        -name "mris_topo_fixer" -or \
+        -name "mris_volmask" -or \
+        -name "mrisp_paint" -or \
+        -name "pctsurfcon" -or \
+        -name "recon-all" -or \
+        -name "t4img_4dfp" -or \
+        -name "tal_QC_AZS" -or \
+        -name "talairach_afd" -or \
+        -name "talairach_avi" -or \
+        -name "tkregister2_cmdl" \) -delete
 
 # Simulate SetUpFreeSurfer.sh
 ENV FSL_DIR="/opt/fsl-5.0.11" \
@@ -99,7 +181,7 @@ RUN curl -sSL "http://neuro.debian.net/lists/$( lsb_release -c | cut -f2 ).us-ca
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
                     connectome-workbench=1.5.0-1~nd20.04+1 \
-                    git-annex-standalone=8.20210223-1~ndall+1 && \
+                    git-annex-standalone=8.20210903-1~ndall+1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # FSL 5.0.11 (neurodocker build)

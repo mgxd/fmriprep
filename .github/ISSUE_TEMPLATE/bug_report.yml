@@ -44,8 +44,8 @@ body:
     attributes:
       label: Have you checked that your inputs are BIDS valid?
       options:
-        - Yes
-        - No
+        - "Yes"
+        - "No"
     validations:
       required: true
   - type: dropdown
@@ -53,8 +53,8 @@ body:
     attributes:
       label: Are you reusing previously computed results (e.g., FreeSurfer, Anatomical derivatives, work directory of previous run)?
       options:
-        - Yes
-        - No
+        - "Yes"
+        - "No"
     validations:
       required: true
   - type: textarea

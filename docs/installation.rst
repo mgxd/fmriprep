@@ -3,129 +3,100 @@
 ------------
 Installation
 ------------
+There are two ways to get *fMRIPrep* installed:
 
-There are four ways to use fmriprep: on the free cloud service OpenNeuro.org, in a `Docker Container`_, in a `Singularity Container`_, or in a `Manually Prepared Environment`_.
-Using OpenNeuro or a local container method is highly recommended.
-Once you are ready to run fmriprep, see Usage_ for details.
+* within a `Manually Prepared Environment (Python 3.7+)`_, also known as
+  *bare-metal installation*; or
+* using container technologies (RECOMMENDED).
 
-OpenNeuro
-=========
+Once you have your *bare-metal* environment set-up (first option above),
+the next step is executing the ``fmriprep`` command-line.
+The ``fmriprep`` command-line options are documented in the :ref:`usage`
+section.
+The ``fmriprep`` command-line adheres to the `BIDS-Apps recommendations
+for the user interface <usage.html#execution-and-the-bids-format>`__.
+Therefore, the command-line has the following structure:
+::
 
-fmriprep is available on the free cloud platform `OpenNeuro.org <http://openneuro.org>`.
-After uploading your BIDS compatible dataset to OpenNeuro you will be able to
-run fmriprep for free using OpenNeuro servers. Since there is no installation
-required this is the easiest way to run fmriprep.
+  $ fmriprep <input_bids_path> <derivatives_path> <analysis_level> <named_options>
 
-Docker Container
-================
+On the other hand, if you chose a container infrastructure, then
+the command-line will be composed of a preamble to configure the
+container execution followed by the ``fmriprep`` command-line options
+as if you were running it on a *bare-metal* installation.
+The command-line structure above is then modified as follows:
+::
 
-Make sure command-line `Docker is installed <https://docs.docker.com/engine/installation/>`_.
+  $ <container_command_and_options> <container_image> \
+       <input_bids_path> <derivatives_path> <analysis_level> <fmriprep_named_options>
 
-See `External Dependencies`_ for more information (e.g., specific versions) on what is included in the fmriprep Docker image.
+Therefore, once specified the container options and the image to be run
+the command line is the same as for the *bare-metal* installation but dropping
+the ``fmriprep`` executable name.
 
-There are two ways to run fmriprep through Docker; the first, recommended way
-is to use the `fmriprep-docker`_ wrapper.
-This requires Python and an internet connection.
+Containerized execution (Docker and Singularity)
+================================================
+*fMRIPrep* is a *NiPreps* application, and therefore follows some overarching principles
+of containerized execution drawn from the BIDS-Apps protocols.
+For detailed information of containerized execution of *NiPreps*, please visit the corresponding
+`Docker <https://www.nipreps.org/apps/docker/>`__
+or `Singularity <https://www.nipreps.org/apps/singularity/>`__ subsections.
+The *NiPreps* portal also containes
+`extended details of execution with the Docker wrapper <https://www.nipreps.org/apps/docker/#running-a-niprep-with-a-lightweight-wrapper>`__.
 
-To install::
+Manually Prepared Environment (Python 3.7+)
+===========================================
 
-    $ pip install --user --upgrade fmriprep-docker
+.. warning::
 
-To run::
+   This method is not recommended! Please checkout container alternatives.
 
-    $ fmriprep-docker /path/to/data/dir /path/to/output/dir participant
-
-The second way to run fmriprep is to invoke ``docker`` directly. ::
-
-    $ docker run -ti --rm \
-        -v filepath/to/data/dir:/data:ro \
-        -v filepath/to/output/dir:/out \
-        poldracklab/fmriprep:latest \
-        /data /out/out \
-        participant
-
-For example: ::
-
-    $ docker run -ti --rm \
-        -v $HOME/fullds005:/data:ro \
-        -v $HOME/dockerout:/out \
-        poldracklab/fmriprep:latest \
-        /data /out/out \
-        participant \
-        --ignore fieldmaps
-
-Singularity Container
-=====================
-
-For security reasons, many HPCs (e.g., TACC) do not allow Docker containers, but do allow `Singularity <https://github.com/singularityware/singularity>`_ containers.
-In this case, start with a machine (e.g., your personal computer) with Docker installed.
-Use `docker2singularity <https://github.com/singularityware/docker2singularity>`_ to create a singularity image. You will need an active internet connection and some time. ::
-
-    $ docker run --privileged -t --rm \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        -v D:\host\path\where\to\output\singularity\image:/output \
-        singularityware/docker2singularity \
-        poldracklab/fmriprep:latest
-
-Transfer the resulting Singularity image to the HPC, for example, using ``scp``. ::
-
-    $ scp poldracklab_fmriprep_latest-*.img user@hcpserver.edu:/path/to/downloads
-
-If the data to be preprocessed is also on the HPC, you are ready to run fmriprep. ::
-
-    $ singularity run path/to/singularity/image.img \
-        path/to/data/dir path/to/output/dir \
-        participant \
-        --participant-label label
-
-For example: ::
-
-    $ singularity run ~/poldracklab_fmriprep_latest-2016-12-04-5b74ad9a4c4d.img \
-        /work/04168/asdf/lonestar/ $WORK/lonestar/output \
-        participant \
-        --participant-label 387 --nthreads 16 -w $WORK/lonestar/work \
-        --ants-nthreads 16
-
-.. note::
-
-   Singularity by default `exposes all environment variables from the host inside the container <https://github.com/singularityware/singularity/issues/445>`_.
-   Because of this your host libraries (such as nipype) could be accidentally used instead of the ones inside the container - if they are included in PYTHONPATH.
-   To avoid such situation we recommend unsetting PYTHONPATH in production use. For example: ::
-
-      $ PYTHONPATH="" singularity run ~/poldracklab_fmriprep_latest-2016-12-04-5b74ad9a4c4d.img \
-        /work/04168/asdf/lonestar/ $WORK/lonestar/output \
-        participant \
-        --participant-label 387 --nthreads 16 -w $WORK/lonestar/work \
-        --ants-nthreads 16
-
-Manually Prepared Environment
-=============================
-
-.. note::
-
-   This method is not recommended! Make sure you would rather do this than use a `Docker Container`_ or a `Singularity Container`_.
-
-Make sure all of fmriprep's `External Dependencies`_ are installed.
+Make sure all of *fMRIPrep*'s `External Dependencies`_ are installed.
 These tools must be installed and their binaries available in the
 system's ``$PATH``.
+A relatively interpretable description of how your environment can be set-up
+is found in the `Dockerfile <https://github.com/nipreps/fmriprep/blob/master/Dockerfile>`_.
+As an additional installation setting, FreeSurfer requires a license file (see :ref:`fs_license`).
 
-If you have pip installed, install fmriprep ::
+On a functional Python 3.7 (or above) environment with ``pip`` installed,
+*fMRIPrep* can be installed using the habitual command ::
 
-    $ pip install fmriprep
+    $ python -m pip install fmriprep
 
-If you have your data on hand, you are ready to run fmriprep: ::
+Check your installation with the ``--version`` argument ::
 
-    $ fmriprep data/dir output/dir participant --participant-label label
+    $ fmriprep --version
+
 
 External Dependencies
-=====================
+---------------------
+*fMRIPrep* is written using Python 3.7 (or above), and is based on
+nipype_.
 
-``fmriprep`` is implemented using nipype_, but it requires some other neuroimaging
-software tools:
+*fMRIPrep* requires some other neuroimaging software tools that are
+not handled by the Python's packaging system (Pypi) used to deploy
+the ``fmriprep`` package:
 
-- `FSL <http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/>`_ (version 5.0.9)
-- `ANTs <http://stnava.github.io/ANTs/>`_ (version 2.2.0 - NeuroDocker build)
-- `AFNI <https://afni.nimh.nih.gov/>`_ (version Debian-16.2.07)
+- FSL_ (version 5.0.9)
+- ANTs_ (version 2.2.0 - NeuroDocker build)
+- AFNI_ (version Debian-16.2.07)
 - `C3D <https://sourceforge.net/projects/c3d/>`_ (version 1.0.0)
-- `FreeSurfer <https://surfer.nmr.mgh.harvard.edu/>`_ (version 6.0.0)
-- `ICA-AROMA <https://github.com/rhr-pruim/ICA-AROMA/>`_ (version 0.4.1-beta)
+- FreeSurfer_ (version 6.0.1)
+- `ICA-AROMA <https://github.com/maartenmennes/ICA-AROMA/archive/e8d7a58.tar.gz>`_ (commit e8d7a58, post v0.4.4-beta)
+- `bids-validator <https://github.com/bids-standard/bids-validator>`_ (version 1.4.0)
+- `connectome-workbench <https://www.humanconnectome.org/software/connectome-workbench>`_ (version Debian-1.3.2)
+
+Not running on a local machine? - Data transfer
+===============================================
+If you intend to run *fMRIPrep* on a remote system, you will need to
+make your data available within that system first.
+
+For instance, here at the Poldrack Lab we use Stanford's
+:abbr:`HPC (high-performance computing)` system, called Sherlock.
+Sherlock enables `the following data transfer options
+<https://www.sherlock.stanford.edu/docs/user-guide/storage/data-transfer/>`_.
+
+Alternatively, more comprehensive solutions such as `Datalad
+<http://www.datalad.org/>`_ will handle data transfers with the appropriate
+settings and commands.
+Datalad also performs version control over your data.

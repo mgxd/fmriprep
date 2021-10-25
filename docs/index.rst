@@ -5,8 +5,6 @@
 
 .. include:: links.rst
 .. include:: ../README.rst
-.. include:: authors.rst
-
 
 Contents
 --------
@@ -15,8 +13,10 @@ Contents
    :maxdepth: 3
 
    installation
-   changes
    usage
    workflows
-   contributors
-   api/index.rst
+   outputs
+   spaces
+   faq
+   api
+   changes

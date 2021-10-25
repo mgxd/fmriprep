@@ -1,7 +1,8 @@
-#documentation
-recursive-include docs/_build/html *
-
 #Misc
-include requirements.txt
 include CHANGES.rst
 include LICENSE
+include NOTICE
+
+# versioneer
+include versioneer.py
+include fmriprep/_version.py

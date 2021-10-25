@@ -1,56 +1,60 @@
 #!/usr/bin/env python
-from __future__ import print_function, unicode_literals, division, absolute_import
-from builtins import int, map, input, zip
-from future import standard_library
+"""
+The *fMRIPrep* on Docker wrapper
+
+This is a lightweight Python wrapper to run *fMRIPrep*.
+Docker must be installed and running. This can be checked
+running ::
+
+  docker info
+
+Please acknowledge this work using the citation boilerplate that *fMRIPrep* includes
+in the visual report generated for every subject processed.
+For a more detailed description of the citation boilerplate and its relevance,
+please check out the
+`NiPreps documentation <https://www.nipreps.org/intro/transparency/#citation-boilerplates>`__.
+Please report any feedback to our `GitHub repository <https://github.com/nipreps/fmriprep>`__.
+"""
 import sys
 import os
 import re
-import argparse
 import subprocess
 
-standard_library.install_aliases()
-
 __version__ = '99.99.99'
-__packagename__ = 'fmriprep-docker'
-__author__ = 'The CRN developers'
-__copyright__ = 'Copyright 2017, Center for Reproducible Neuroscience, Stanford University'
+__copyright__ = 'Copyright 2020, Center for Reproducible Neuroscience, Stanford University'
 __credits__ = ['Craig Moodie', 'Ross Blair', 'Oscar Esteban', 'Chris Gorgolewski',
                'Shoshana Berleant', 'Christopher J. Markiewicz', 'Russell A. Poldrack']
-__license__ = '3-clause BSD'
-__maintainer__ = 'Christopher J. Markiewicz'
-__email__ = 'crn.poldracklab@gmail.com'
-__url__ = 'https://github.com/poldracklab/fmriprep'
-__bugreports__ = 'https://github.com/poldracklab/fmriprep/issues'
-
-__description__ = """\
-fMRIprep is a functional magnetic resonance image pre-processing pipeline \
-that is designed to provide an easily accessible, state-of-the-art interface \
-that is robust to differences in scan acquisition protocols and that requires \
-minimal user input, while providing easily interpretable and comprehensive \
-error and output reporting."""
-__longdesc__ = """\
-This package is a basic wrapper for fMRIprep that generates the appropriate
-Docker commands, providing an intuitive interface to running the fMRIprep
-workflow in a Docker environment."""
-
-DOWNLOAD_URL = (
-    'https://pypi.python.org/packages/source/{name[0]}/{name}/{name}-{ver}.tar.gz'.format(
-        name=__packagename__, ver=__version__))
-
-CLASSIFIERS = [
-    'Development Status :: 3 - Alpha',
-    'Intended Audience :: Science/Research',
-    'License :: OSI Approved :: BSD License',
-    'Programming Language :: Python :: 2.7',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
-]
+__bugreports__ = 'https://github.com/nipreps/fmriprep/issues'
 
 
 MISSING = """
 Image '{}' is missing
 Would you like to download? [Y/n] """
-PKG_PATH = '/usr/local/miniconda/lib/python3.6/site-packages'
+PKG_PATH = '/usr/local/miniconda/lib/python3.8/site-packages'
+TF_TEMPLATES = (
+    'MNI152Lin',
+    'MNI152NLin2009cAsym',
+    'MNI152NLin6Asym',
+    'MNI152NLin6Sym',
+    'MNIInfant',
+    'MNIPediatricAsym',
+    'NKI',
+    'OASIS30ANTs',
+    'PNC',
+    'UNCInfant',
+    'fsLR',
+    'fsaverage',
+    'fsaverage5',
+    'fsaverage6',
+)
+NONSTANDARD_REFERENCES = (
+    'anat',
+    'T1w',
+    'run',
+    'func',
+    'sbref',
+    'fsnative'
+)
 
 # Monkey-patch Py2 subprocess
 if not hasattr(subprocess, 'DEVNULL'):
@@ -79,6 +83,13 @@ if not hasattr(subprocess, 'run'):
 
         return res
     subprocess.run = _run
+
+
+# De-fang Python 2's input - we don't eval user input
+try:
+    input = raw_input
+except NameError:
+    pass
 
 
 def check_docker():
@@ -126,6 +137,24 @@ def check_memory(image):
 
 
 def merge_help(wrapper_help, target_help):
+    def _get_posargs(usage):
+        """
+        Extract positional arguments from usage string.
+
+        This function can be used by both native fmriprep (`fmriprep -h`)
+        and the docker wrapper (`fmriprep-docker -h`).
+        """
+        posargs = []
+        for targ in usage.split('\n')[-3:]:
+            line = targ.lstrip()
+            if line.startswith('usage'):
+                continue
+            if line[0].isalnum() or line[0] == "{":
+                posargs.append(line)
+            elif line[0] == '[' and (line[1].isalnum() or line[1] == "{"):
+                posargs.append(line)
+        return " ".join(posargs)
+
     # Matches all flags with up to one nested square bracket
     opt_re = re.compile(r'(\[--?[\w-]+(?:[^\[\]]+(?:\[[^\[\]]+\])?)?\])')
     # Matches flag name only
@@ -140,8 +169,8 @@ def merge_help(wrapper_help, target_help):
     t_usage, t_details = t_help.split('\n\n', 1)
     t_groups = t_details.split('\n\n')
 
-    w_posargs = w_usage.split('\n')[-1].lstrip()
-    t_posargs = t_usage.split('\n')[-1].lstrip()
+    w_posargs = _get_posargs(w_usage)
+    t_posargs = _get_posargs(t_usage)
 
     w_options = opt_re.findall(w_usage)
     w_flags = sum(map(flag_re.findall, w_options), [])
@@ -149,12 +178,23 @@ def merge_help(wrapper_help, target_help):
     t_flags = sum(map(flag_re.findall, t_options), [])
 
     # The following code makes this assumption
-    assert w_flags[:2] == ['h', 'v']
+    assert w_flags[:2] == ['h', 'version']
     assert w_posargs.replace(']', '').replace('[', '') == t_posargs
 
     # Make sure we're not clobbering options we don't mean to
     overlap = set(w_flags).intersection(t_flags)
-    expected_overlap = set(['h', 'v', 'w', 'output-grid-reference'])
+    expected_overlap = {
+        'anat-derivatives',
+        'bids-database-dir',
+        'fs-license-file',
+        'fs-subjects-dir',
+        'config-file',
+        'h',
+        'use-plugin',
+        'version',
+        'w',
+    }
+
     assert overlap == expected_overlap, "Clobbering options: {}".format(
         ', '.join(overlap - expected_overlap))
 
@@ -167,7 +207,7 @@ def merge_help(wrapper_help, target_help):
         w_options[:2],
         [opt for opt, flag in zip(t_options, t_flags) if flag not in overlap],
         w_options[2:]
-        ), [])
+    ), [])
     opt_line_length = 79 - len(start)
     length = 0
     opt_lines = [start]
@@ -194,30 +234,60 @@ def merge_help(wrapper_help, target_help):
     sections.append(w_groups[2])
 
     # All remaining sections, show target then wrapper (skipping duplicates)
-    sections.extend(t_groups[3:] + w_groups[5:])
+    sections.extend(t_groups[3:] + w_groups[6:])
     return '\n\n'.join(sections)
 
 
-def main():
+def is_in_directory(filepath, directory):
+    return os.path.realpath(filepath).startswith(
+        os.path.realpath(directory) + os.sep)
+
+
+def get_parser():
+    """Defines the command line interface of the wrapper"""
+    import argparse
+    from functools import partial
+
+    class ToDict(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string=None):
+            d = {}
+            for kv in values:
+                k, v = kv.split("=")
+                d[k] = os.path.abspath(v)
+            setattr(namespace, self.dest, d)
+
+    def _is_file(path, parser):
+        """Ensure a given path exists and it is a file."""
+        path = os.path.abspath(path)
+        if not os.path.isfile(path):
+            raise parser.error(
+                "Path should point to a file (or symlink of file): <%s>." % path
+            )
+        return path
+
     parser = argparse.ArgumentParser(
-        description='fMRI Preprocessing workflow',
+        description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         add_help=False)
 
+    IsFile = partial(_is_file, parser=parser)
+
     # Standard FMRIPREP arguments
-    parser.add_argument('bids_dir', nargs='?', type=str, default='')
-    parser.add_argument('output_dir', nargs='?', type=str, default='')
+    parser.add_argument('bids_dir', nargs='?', type=os.path.abspath,
+                        default='')
+    parser.add_argument('output_dir', nargs='?', type=os.path.abspath,
+                        default='')
     parser.add_argument('analysis_level', nargs='?', choices=['participant'],
                         default='participant')
 
     parser.add_argument('-h', '--help', action='store_true',
                         help="show this help message and exit")
-    parser.add_argument('-v', '--version', action='store_true',
+    parser.add_argument('--version', action='store_true',
                         help="show program's version number and exit")
 
     # Allow alternative images (semi-developer)
     parser.add_argument('-i', '--image', metavar='IMG', type=str,
-                        default='poldracklab/fmriprep:{}'.format(__version__),
+                        default='nipreps/fmriprep:{}'.format(__version__),
                         help='image name')
 
     # Options for mapping files and directories into container
@@ -225,31 +295,75 @@ def main():
     g_wrap = parser.add_argument_group(
         'Wrapper options',
         'Standard options that require mapping files into the container')
-    g_wrap.add_argument('-w', '--work-dir', action='store',
+    g_wrap.add_argument('-w', '--work-dir', action='store', type=os.path.abspath,
                         help='path where intermediate results should be stored')
-    g_wrap.add_argument('--output-grid-reference', required=False, action='store',
-                        type=os.path.abspath,
-                        help='Grid reference image for resampling BOLD files to volume template '
-                             'space.')
+    g_wrap.add_argument(
+        '--output-spaces', nargs="*",
+        help="""\
+Standard and non-standard spaces to resample anatomical and functional images to. \
+Standard spaces may be specified by the form \
+``<TEMPLATE>[:res-<resolution>][:cohort-<label>][...]``, where ``<TEMPLATE>`` is \
+a keyword (valid keywords: %s) or path pointing to a user-supplied template, and \
+may be followed by optional, colon-separated parameters. \
+Non-standard spaces (valid keywords: %s) imply specific orientations and sampling \
+grids. \
+Important to note, the ``res-*`` modifier does not define the resolution used for \
+the spatial normalization.""" % (', '.join('"%s"' % s for s in TF_TEMPLATES),
+                                 ', '.join(NONSTANDARD_REFERENCES)))
+
+    g_wrap.add_argument(
+        '--fs-license-file', metavar='PATH', type=IsFile,
+        default=os.getenv('FS_LICENSE', None),
+        help='Path to FreeSurfer license key file. Get it (for free) by registering'
+             ' at https://surfer.nmr.mgh.harvard.edu/registration.html')
+    g_wrap.add_argument(
+        '--fs-subjects-dir', metavar='PATH', type=os.path.abspath,
+        help='Path to existing FreeSurfer subjects directory to reuse. '
+             '(default: OUTPUT_DIR/freesurfer)')
+    g_wrap.add_argument(
+        '--config-file', metavar='PATH', type=os.path.abspath,
+        help="Use pre-generated configuration file. Values in file will be overridden "
+             "by command-line arguments.")
+    g_wrap.add_argument(
+        '--anat-derivatives', metavar='PATH', type=os.path.abspath,
+        help='Path to existing sMRIPrep/fMRIPrep-anatomical derivatives to fasttrack '
+             'the anatomical workflow.')
+    g_wrap.add_argument(
+        '--use-plugin', metavar='PATH', action='store', default=None,
+        type=os.path.abspath, help='nipype plugin configuration file')
+    g_wrap.add_argument(
+        '--bids-database-dir', metavar='PATH', type=os.path.abspath,
+        help="Path to an existing PyBIDS database folder, for faster indexing "
+             "(especially useful for large datasets).")
 
     # Developer patch/shell options
     g_dev = parser.add_argument_group(
         'Developer options',
         'Tools for testing and debugging FMRIPREP')
-    g_dev.add_argument('-f', '--patch-fmriprep', metavar='PATH',
-                       type=os.path.abspath,
-                       help='working fmriprep repository')
-    g_dev.add_argument('-n', '--patch-niworkflows', metavar='PATH',
-                       type=os.path.abspath,
-                       help='working niworkflows repository')
-    g_dev.add_argument('-p', '--patch-nipype', metavar='PATH',
-                       type=os.path.abspath,
-                       help='working nipype repository')
+    g_dev.add_argument('--patch', nargs="+", metavar="PACKAGE=PATH", action=ToDict,
+                       help='local repository to use within container')
     g_dev.add_argument('--shell', action='store_true',
                        help='open shell in image instead of running FMRIPREP')
     g_dev.add_argument('--config', metavar='PATH', action='store',
                        type=os.path.abspath, help='Use custom nipype.cfg file')
+    g_dev.add_argument('-e', '--env', action='append', nargs=2, metavar=('ENV_VAR', 'value'),
+                       help='Set custom environment variable within container')
+    g_dev.add_argument('-u', '--user', action='store',
+                       help='Run container as a given user/uid. Additionally, group/gid can be'
+                            'assigned, (i.e., --user <UID>:<GID>)')
+    g_dev.add_argument('--network', action='store',
+                       help='Run container with a different network driver '
+                            '("none" to simulate no internet connection)')
+    g_dev.add_argument('--no-tty', action='store_true',
+                       help='Run docker without TTY flag -it')
 
+    return parser
+
+
+def main():
+    """Entry point"""
+
+    parser = get_parser()
     # Capture additional arguments to pass inside container
     opts, unknown_args = parser.parse_known_args()
 
@@ -264,11 +378,10 @@ def main():
             print('fmriprep wrapper {!s}'.format(__version__))
         if opts.help:
             parser.print_help()
-        print("fmriprep: ", end='')
         if check == -1:
-            print("Could not find docker command... Is it installed?")
+            print("fmriprep: Could not find docker command... Is it installed?")
         else:
-            print("Make sure you have permission to run 'docker'")
+            print("fmriprep: Make sure you have permission to run 'docker'")
         return 1
 
     # For --help or --version, ask before downloading an image
@@ -294,51 +407,120 @@ def main():
         print('Could not detect memory capacity of Docker container.\n'
               'Do you have permission to run docker?')
         return 1
-    if mem_total < 8000:
+    if not (opts.help or opts.version or '--reports-only' in unknown_args) and mem_total < 8000:
         print('Warning: <8GB of RAM is available within your Docker '
-              'environment.\nSome parts of fMRIprep may fail to complete.')
-        resp = 'N'
-        try:
-            resp = input('Continue anyway? [y/N]')
-        except KeyboardInterrupt:
-            print()
-            return 1
-        if resp not in ('y', 'Y', ''):
-            return 0
+              'environment.\nSome parts of fMRIPrep may fail to complete.')
+        if '--mem_mb' not in unknown_args:
+            resp = 'N'
+            try:
+                resp = input('Continue anyway? [y/N]')
+            except KeyboardInterrupt:
+                print()
+                return 1
+            if resp not in ('y', 'Y', ''):
+                return 0
 
-    command = ['docker', 'run', '--rm', '-it']
+    ret = subprocess.run(['docker', 'version', '--format', "{{.Server.Version}}"],
+                         stdout=subprocess.PIPE)
+    docker_version = ret.stdout.decode('ascii').strip()
+
+    command = ['docker', 'run', '--rm', '-e',
+               'DOCKER_VERSION_8395080871=%s' % docker_version]
+
+    if not opts.no_tty:
+        if opts.help:
+            # TTY can corrupt stdout
+            command.append('-i')
+        else:
+            command.append('-it')
 
     # Patch working repositories into installed package directories
-    for pkg in ('fmriprep', 'niworkflows', 'nipype'):
-        repo_path = getattr(opts, 'patch_' + pkg)
-        pkg_path = '{}/{}'.format(PKG_PATH, pkg)  # Always POSIX path
-        if repo_path is not None:
-            command.extend(['-v', '{}:{}:ro'.format(repo_path, pkg_path)])
+    if opts.patch:
+        for pkg, repo_path in opts.patch.items():
+            command.extend(
+                ['-v', '{}:{}/{}:ro'.format(repo_path, PKG_PATH, pkg)]
+            )
+
+    if opts.env:
+        for envvar in opts.env:
+            command.extend(['-e', '%s=%s' % tuple(envvar)])
+
+    if opts.user:
+        command.extend(['-u', opts.user])
+
+    if opts.fs_license_file:
+        command.extend([
+            '-v', '{}:/opt/freesurfer/license.txt:ro'.format(
+                opts.fs_license_file)])
 
     main_args = []
     if opts.bids_dir:
         command.extend(['-v', ':'.join((opts.bids_dir, '/data', 'ro'))])
         main_args.append('/data')
     if opts.output_dir:
+        if not os.path.exists(opts.output_dir):
+            # create it before docker does
+            os.makedirs(opts.output_dir)
         command.extend(['-v', ':'.join((opts.output_dir, '/out'))])
         main_args.append('/out')
     main_args.append(opts.analysis_level)
+
+    if opts.fs_subjects_dir:
+        command.extend(['-v', '{}:/opt/subjects'.format(opts.fs_subjects_dir)])
+        unknown_args.extend(['--fs-subjects-dir', '/opt/subjects'])
+
+    if opts.config_file:
+        command.extend(['-v', '{}:/tmp/config.toml'.format(opts.config_file)])
+        unknown_args.extend(['--config-file', '/tmp/config.toml'])
+
+    if opts.anat_derivatives:
+        command.extend(['-v', '{}:/opt/smriprep/subjects'.format(opts.anat_derivatives)])
+        unknown_args.extend(['--anat-derivatives', '/opt/smriprep/subjects'])
 
     if opts.work_dir:
         command.extend(['-v', ':'.join((opts.work_dir, '/scratch'))])
         unknown_args.extend(['-w', '/scratch'])
 
-    if opts.config:
-        command.extend(['-v', ':'.join((opts.config,
-                                        '/root/.nipype/nipype.cfg', 'ro'))])
+    # Check that work_dir is not a child of bids_dir
+    if opts.work_dir and opts.bids_dir:
+        if is_in_directory(opts.work_dir, opts.bids_dir):
+            print(
+                'The selected working directory is a subdirectory of the input BIDS folder. '
+                'Please modify the output path.')
+            return 1
 
-    if opts.output_grid_reference:
-        target = '/imports/' + os.path.basename(opts.output_grid_reference)
-        command.extend(['-v', ':'.join((opts.output_grid_reference, target, 'ro'))])
-        unknown_args.extend(['--output-grid-reference', target])
+    if opts.config:
+        command.extend(['-v', ':'.join((
+            opts.config, '/home/fmriprep/.nipype/nipype.cfg', 'ro'))])
+
+    if opts.use_plugin:
+        command.extend(['-v', ':'.join((opts.use_plugin, '/tmp/plugin.yml',
+                                        'ro'))])
+        unknown_args.extend(['--use-plugin', '/tmp/plugin.yml'])
+
+    if opts.bids_database_dir:
+        command.extend(['-v', ':'.join((opts.bids_database_dir, '/tmp/bids_db'))])
+        unknown_args.extend(['--bids-database-dir', '/tmp/bids_db'])
+
+    if opts.output_spaces:
+        spaces = []
+        for space in opts.output_spaces:
+            if space.split(':')[0] not in (TF_TEMPLATES + NONSTANDARD_REFERENCES):
+                tpl = os.path.basename(space)
+                if not tpl.startswith('tpl-'):
+                    raise RuntimeError("Custom template %s requires a `tpl-` prefix" % tpl)
+                target = '/home/fmriprep/.cache/templateflow/' + tpl
+                command.extend(['-v', ':'.join((os.path.abspath(space), target, 'ro'))])
+                spaces.append(tpl[4:])
+            else:
+                spaces.append(space)
+        unknown_args.extend(['--output-spaces'] + spaces)
 
     if opts.shell:
         command.append('--entrypoint=bash')
+
+    if opts.network:
+        command.append('--network=' + opts.network)
 
     command.append(opts.image)
 
@@ -351,7 +533,7 @@ def main():
         return 0
     elif opts.version:
         # Get version to be run and exit
-        command.append('-v')
+        command.append('--version')
         ret = subprocess.run(command)
         return ret.returncode
 
@@ -362,7 +544,7 @@ def main():
     print("RUNNING: " + ' '.join(command))
     ret = subprocess.run(command)
     if ret.returncode:
-        print("fmriprep: Please report errors to {}".format(__bugreports__))
+        print("fMRIPrep: Please report errors to {}".format(__bugreports__))
     return ret.returncode
 
 

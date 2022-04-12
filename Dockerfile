@@ -197,7 +197,7 @@ RUN apt-get update -qq \
            xvfb \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && curl -sSL --retry 5 -o /tmp/multiarch.deb http://archive.ubuntu.com/ubuntu/pool/main/g/glibc/multiarch-support_2.27-3ubuntu1.2_amd64.deb \
+    && curl -sSL --retry 5 -o /tmp/multiarch.deb http://archive.ubuntu.com/ubuntu/pool/main/g/glibc/multiarch-support_2.27-3ubuntu1.5_amd64.deb \
     && dpkg -i /tmp/multiarch.deb \
     && rm /tmp/multiarch.deb \
     && curl -sSL --retry 5 -o /tmp/libxp6.deb http://mirrors.kernel.org/debian/pool/main/libx/libxp/libxp6_1.0.2-2_amd64.deb \
@@ -258,6 +258,10 @@ RUN curl -sSLO https://www.humanconnectome.org/storage/app/media/workbench/workb
     rm -rf /opt/workbench/libs_linux64_software_opengl /opt/workbench/plugins_linux64 && \
     strip --remove-section=.note.ABI-tag /opt/workbench/libs_linux64/libQt5Core.so.5
     # ABI tags can interfere when running on Singularity
+
+# Download precompiled msm binary
+RUN wget https://github.com/ecr05/MSM_HOCR/releases/download/v3.0FSL/msm_ubuntu_v3 -O /usr/local/bin/msm \
+    && chmod +x /usr/local/bin/msm
 
 ENV PATH="/opt/workbench/bin_linux64:$PATH" \
     LD_LIBRARY_PATH="/opt/workbench/lib_linux64:$LD_LIBRARY_PATH"

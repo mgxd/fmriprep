@@ -562,6 +562,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
         name="final_boldref_wf",
         omp_nthreads=omp_nthreads,
         multiecho=multiecho,
+        pre_mask=True,
     )
     final_boldref_wf.__desc__ = None  # Unset description to avoid second appearance
 
@@ -1181,6 +1182,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
         # remaining workflow connections
         (join_sdc_echos, final_boldref_wf, [
             ("corrected", "inputnode.bold_file"),
+            (("corrected_mask", pop_file), "inputnode.bold_mask"),
         ]),
         (join_sdc_echos, bold_t2s_wf, [
             (("corrected_mask", pop_file), "inputnode.bold_mask"),

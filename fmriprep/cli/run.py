@@ -34,6 +34,7 @@ def main():
     from pathlib import Path
 
     from ..utils.bids import write_bidsignore, write_derivative_description
+    from ..utils.misc import get_template_files
     from .parser import parse_args
     from .workflow import build_workflow
 
@@ -80,6 +81,9 @@ def main():
 
         sentry_setup()
         setup_migas(init_ping=True)
+
+    for space in config.workflow.spaces.get_spaces(nonstandard=False, dim=(3,)):
+        get_template_files(space, config.execution.sloppy)
 
     # CRITICAL Save the config to a file. This is necessary because the execution graph
     # is built as a separate process to keep the memory footprint low. The most

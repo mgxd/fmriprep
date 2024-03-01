@@ -23,6 +23,7 @@
 """Miscellaneous utilities."""
 
 from functools import cache
+from pathlib import Path
 
 
 def check_deps(workflow):
@@ -66,3 +67,49 @@ def estimate_bold_mem_usage(bold_fname: str) -> tuple[int, dict]:
     }
 
     return bold_tlen, mem_gb
+
+
+TemplateFile = Path | None
+
+
+def get_template_files(template: str, sloppy: bool = False) -> tuple[TemplateFile, TemplateFile]:
+    """
+    Query templateflow for required files to ensure it is present on the filesystem.
+
+    """
+    import warnings
+
+    import templateflow.api as tf
+
+    spec = {}
+    _space = template.split(':', 1)
+    if len(_space) > 1:
+        spec['cohort'] = _space[1].replace('cohort-', '')
+    space = _space[0]
+
+    available_res = tf.TF_LAYOUT.get_resolutions(template=space)
+    if sloppy and 2 in available_res:
+        res = 2
+    elif 1 in available_res:
+        res = 1
+    else:
+        res = None
+    spec['resolution'] = res
+
+    ## Expected files
+    t1w = None
+    try:
+        t1w = tf.get(space, desc=None, suffix='T1w', **spec) or None
+    except Exception:  # noqa: S110, BLE001
+        warnings.warn(f'Could not find T1w for {template}', stacklevel=1)
+
+    mask = None
+    try:
+        mask = (
+            tf.get(space, desc='brain', suffix='mask', **spec)
+            or tf.get(space, label='brain', suffix='mask', **spec)
+        ) or None
+    except Exception:  # noqa: S110, BLE001
+        warnings.warn(f'Could not find mask for {template}', stacklevel=1)
+
+    return t1w, mask
